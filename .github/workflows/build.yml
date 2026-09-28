@@ -1,0 +1,44 @@
+name: Build firmware
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ghcr.io/qmk/qmk_cli
+    steps:
+      - name: Git safe directory
+        run: git config --global --add safe.directory '*'
+
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+        with:
+          path: src
+
+      - name: Checkout vial-qmk
+        uses: actions/checkout@v4
+        with:
+          repository: vial-kb/vial-qmk
+          ref: vial
+          submodules: recursive
+          path: vial-qmk
+
+      - name: Copy keyboard files
+        run: |
+          mkdir -p vial-qmk/keyboards/handwired
+          cp -a src/keyboards/handwired/yd_numpad vial-qmk/keyboards/handwired/yd_numpad
+
+      - name: Compile
+        working-directory: vial-qmk
+        run: qmk compile -kb handwired/yd_numpad -km vial
+
+      - name: Upload UF2
+        uses: actions/upload-artifact@v4
+        with:
+          name: yd-numpad-vial
+          path: |
+            vial-qmk/.build/*.uf2
+            vial-qmk/*.uf2
+          if-no-files-found: error
